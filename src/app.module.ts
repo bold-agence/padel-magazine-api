@@ -9,6 +9,7 @@ import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { PlayersModule } from './modules/players/players.module';
 import { MinioModule } from './modules/minio/minio.module';
+import { ArticlesModule } from './modules/articles/articles.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { MinioModule } from './modules/minio/minio.module';
     UsersModule,
     AuthModule,
     PlayersModule,
+    ArticlesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

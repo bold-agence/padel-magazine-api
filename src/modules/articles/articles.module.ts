@@ -6,13 +6,32 @@ import { Tag } from './entities/tag.entity';
 import { ArticleCategory } from './entities/article-category.entity';
 import { ArticlesService } from './articles.service';
 import { ArticlesController } from './articles.controller';
+import { TagsService } from './tags.service';
+import { TagsController } from './tags.controller';
+import { SectionsService } from './sections.service';
+import { SectionsController } from './sections.controller';
+import { ArticleCategoriesService } from './article-categories.service';
+import { ArticleCategoriesController } from './article-categories.controller';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Article, Section, Tag, ArticleCategory]),
+  imports: [TypeOrmModule.forFeature([Article, Section, Tag, ArticleCategory])],
+  controllers: [
+    TagsController,
+    SectionsController,
+    ArticleCategoriesController,
+    ArticlesController,
   ],
-  controllers: [ArticlesController],
-  providers: [ArticlesService],
-  exports: [ArticlesService],
+  providers: [
+    ArticlesService,
+    TagsService,
+    SectionsService,
+    ArticleCategoriesService,
+  ],
+  exports: [
+    ArticlesService,
+    TagsService,
+    SectionsService,
+    ArticleCategoriesService,
+  ],
 })
 export class ArticlesModule {}

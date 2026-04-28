@@ -14,7 +14,6 @@ export class UsersService {
   ) {}
 
   async create(dto: CreateUserDto): Promise<User> {
-
     const existing = await this.repo.findOne({
       where: {
         email: dto.email,
@@ -27,8 +26,6 @@ export class UsersService {
 
     const user = await this.repo.create(dto);
     return this.repo.save(user);
-
-
   }
 
   async findAll(): Promise<User[]> {

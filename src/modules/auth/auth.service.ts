@@ -42,12 +42,11 @@ export class AuthService {
   async login(user: User) {
     const payload = { sub: user.id, email: user.email };
     return {
-      access_token: this.jwtService.sign(payload)
+      access_token: this.jwtService.sign(payload),
     };
   }
 
   async me(userId: string) {
-
     const user = await this.usersService.findOne(userId);
     if (!user) {
       throw new NotFoundException('Utilisateur introuvable');

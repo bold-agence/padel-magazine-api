@@ -15,4 +15,12 @@ export const validationSchema = Joi.object({
 
   JWT_SECRET: Joi.string().required(),
   JWT_EXPIRES_IN: Joi.string().default('3600s'),
+
+  MINIO_ENDPOINT: Joi.string().required(),
+  MINIO_PORT: Joi.number().default(9000),
+  MINIO_USE_SSL: Joi.boolean().default(false),
+  MINIO_ACCESS_KEY: Joi.string().required(),
+  MINIO_SECRET_KEY: Joi.string().required(),
+  MINIO_BUCKET: Joi.string().required(),
+  MINIO_PUBLIC_URL: Joi.string().uri().optional(),
 });

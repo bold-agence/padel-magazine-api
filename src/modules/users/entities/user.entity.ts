@@ -3,7 +3,6 @@ import { Entity, Column, BeforeInsert } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import * as bcrypt from 'bcrypt';
 
-
 @Entity('users')
 export class User extends BaseEntity {
   @Column({ unique: true })

@@ -7,6 +7,8 @@ import configuration from './config/configuration';
 import { UsersModule } from './modules/users/users.module';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { PlayersModule } from './modules/players/players.module';
+import { MinioModule } from './modules/minio/minio.module';
 
 @Module({
   imports: [
@@ -16,8 +18,10 @@ import { AuthModule } from './modules/auth/auth.module';
       validationSchema,
     }),
     DatabaseModule,
+    MinioModule,
     UsersModule,
     AuthModule,
+    PlayersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

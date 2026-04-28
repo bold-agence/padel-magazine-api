@@ -7,7 +7,10 @@ import {
   ParseUUIDPipe,
   Patch,
   Post,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ArticlesService } from './articles.service';
 import { CreateArticleDto } from './dto/create-article.dto';
 import { UpdateArticleDto } from './dto/update-article.dto';
@@ -19,6 +22,17 @@ export class ArticlesController {
   @Post()
   create(@Body() dto: CreateArticleDto) {
     return this.articlesService.create(dto);
+  }
+
+  @Post('banner-image')
+  @UseInterceptors(FileInterceptor('bannerImage'))
+  uploadBannerImage(@UploadedFile() file?: Express.Multer.File) {
+    if (!file) {
+      return { url: null };
+    }
+    return this.articlesService
+      .uploadBannerImage(file)
+      .then((url) => ({ url }));
   }
 
   @Get()

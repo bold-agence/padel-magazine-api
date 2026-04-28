@@ -12,6 +12,7 @@ import { Tag } from './entities/tag.entity';
 import { ArticleCategory } from './entities/article-category.entity';
 import { Section } from './entities/section.entity';
 import { SectionDto } from './dto/section.dto';
+import { MinioService } from '../minio/minio.service';
 
 @Injectable()
 export class ArticlesService {
@@ -24,10 +25,17 @@ export class ArticlesService {
     private readonly categoriesRepo: Repository<ArticleCategory>,
     @InjectRepository(Section)
     private readonly sectionsRepo: Repository<Section>,
+    private readonly minioService: MinioService,
   ) {}
 
+  async uploadBannerImage(file: Express.Multer.File): Promise<string> {
+    return this.minioService.uploadFile(file, 'articles');
+  }
+
   async create(dto: CreateArticleDto): Promise<Article> {
-    const existing = await this.articlesRepo.findOne({ where: { slug: dto.slug } });
+    const existing = await this.articlesRepo.findOne({
+      where: { slug: dto.slug },
+    });
     if (existing) {
       throw new ConflictException('Slug already exists');
     }
@@ -37,7 +45,7 @@ export class ArticlesService {
     const sections = this.mapSections(dto.sections);
 
     const article = this.articlesRepo.create({
-      isVisible: dto.isVisible ?? true,
+      isVisible: dto.isVisible === false ? false : true,
       title: dto.title,
       slug: dto.slug,
       author: dto.author,
@@ -91,7 +99,9 @@ export class ArticlesService {
     const article = await this.findOne(id);
 
     if (dto.slug && dto.slug !== article.slug) {
-      const existing = await this.articlesRepo.findOne({ where: { slug: dto.slug } });
+      const existing = await this.articlesRepo.findOne({
+        where: { slug: dto.slug },
+      });
       if (existing) {
         throw new ConflictException('Slug already exists');
       }
@@ -113,7 +123,8 @@ export class ArticlesService {
     }
 
     if (dto.title !== undefined) article.title = dto.title;
-    if (dto.isVisible !== undefined) article.isVisible = dto.isVisible;
+    if (dto.isVisible === true) article.isVisible = true;
+    if (dto.isVisible === false) article.isVisible = false;
     if (dto.slug !== undefined) article.slug = dto.slug;
     if (dto.author !== undefined) article.author = dto.author;
     if (dto.date !== undefined) article.date = new Date(dto.date);
@@ -146,7 +157,9 @@ export class ArticlesService {
       return [];
     }
 
-    const normalized = [...new Set(tags.map((tag) => tag.trim()).filter(Boolean))];
+    const normalized = [
+      ...new Set(tags.map((tag) => tag.trim()).filter(Boolean)),
+    ];
     if (!normalized.length) {
       return [];
     }
@@ -159,7 +172,9 @@ export class ArticlesService {
     const missingNames = normalized.filter((name) => !existingNames.has(name));
 
     const createdTags = missingNames.length
-      ? await this.tagsRepo.save(missingNames.map((name) => this.tagsRepo.create({ name })))
+      ? await this.tagsRepo.save(
+          missingNames.map((name) => this.tagsRepo.create({ name })),
+        )
       : [];
 
     return [...existingTags, ...createdTags];
@@ -176,7 +191,9 @@ export class ArticlesService {
       return null;
     }
 
-    const category = await this.categoriesRepo.findOne({ where: { id: categoryId } });
+    const category = await this.categoriesRepo.findOne({
+      where: { id: categoryId },
+    });
     if (!category) {
       throw new NotFoundException('Article category not found');
     }

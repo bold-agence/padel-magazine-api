@@ -41,6 +41,9 @@ export class Section extends BaseEntity {
   @Column({ type: 'int', nullable: true })
   spacerHeight?: number;
 
+  @Column({ nullable: true })
+  infoBoxTitle?: string;
+
   @Column({ type: 'jsonb', nullable: true })
   data?: Record<string, unknown>;
 

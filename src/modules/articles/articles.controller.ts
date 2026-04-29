@@ -40,6 +40,16 @@ export class ArticlesController {
     return this.articlesService.findAll();
   }
 
+  @Get('slug/:slug')
+  findBySlug(@Param('slug') slug: string) {
+    return this.articlesService.findBySlug(slug);
+  }
+
+  @Get('slug/:slug/related')
+  findRelatedBySlug(@Param('slug') slug: string) {
+    return this.articlesService.findRelatedBySlug(slug);
+  }
+
   @Get(':id')
   findOne(@Param('id', new ParseUUIDPipe()) id: string) {
     return this.articlesService.findOne(id);

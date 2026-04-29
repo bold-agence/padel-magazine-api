@@ -95,6 +95,73 @@ export class ArticlesService {
     return article;
   }
 
+  async findBySlug(slug: string): Promise<Article> {
+    const article = await this.articlesRepo.findOne({
+      where: { slug, isVisible: true },
+      relations: {
+        sections: true,
+        tags: true,
+        category: true,
+      },
+      order: {
+        sections: { order: 'ASC', createdAt: 'ASC' },
+      },
+    });
+
+    if (!article) {
+      throw new NotFoundException('Article not found');
+    }
+
+    return article;
+  }
+
+  async findRelatedBySlug(slug: string, limit = 3): Promise<Article[]> {
+    const currentArticle = await this.articlesRepo.findOne({
+      where: { slug, isVisible: true },
+      relations: { category: true },
+    });
+
+    if (!currentArticle) {
+      throw new NotFoundException('Article not found');
+    }
+
+    const query = this.articlesRepo
+      .createQueryBuilder('article')
+      .leftJoinAndSelect('article.tags', 'tags')
+      .leftJoinAndSelect('article.category', 'category')
+      .where('article.isVisible = :visible', { visible: true })
+      .andWhere('article.id != :currentId', { currentId: currentArticle.id })
+      .orderBy('article.createdAt', 'DESC')
+      .take(limit);
+
+    if (currentArticle.category?.id) {
+      query.andWhere('article.categoryId = :categoryId', {
+        categoryId: currentArticle.category.id,
+      });
+    }
+
+    const related = await query.getMany();
+    if (related.length >= limit || !currentArticle.category?.id) {
+      return related;
+    }
+
+    const missing = limit - related.length;
+    const fallback = await this.articlesRepo
+      .createQueryBuilder('article')
+      .leftJoinAndSelect('article.tags', 'tags')
+      .leftJoinAndSelect('article.category', 'category')
+      .where('article.isVisible = :visible', { visible: true })
+      .andWhere('article.id != :currentId', { currentId: currentArticle.id })
+      .andWhere('article.categoryId != :categoryId', {
+        categoryId: currentArticle.category.id,
+      })
+      .orderBy('article.createdAt', 'DESC')
+      .take(missing)
+      .getMany();
+
+    return [...related, ...fallback];
+  }
+
   async update(id: string, dto: UpdateArticleDto): Promise<Article> {
     const article = await this.findOne(id);
 

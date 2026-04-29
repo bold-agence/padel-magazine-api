@@ -52,6 +52,11 @@ export class SectionDto {
   @IsOptional()
   spacerHeight?: number;
 
+  @IsString()
+  @MaxLength(120)
+  @IsOptional()
+  infoBoxTitle?: string;
+
   @IsObject()
   @IsOptional()
   data?: Record<string, unknown>;

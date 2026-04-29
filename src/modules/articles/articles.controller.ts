@@ -1,12 +1,15 @@
 import {
   Body,
   Controller,
+  DefaultValuePipe,
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   ParseUUIDPipe,
   Patch,
   Post,
+  Query,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
@@ -38,6 +41,14 @@ export class ArticlesController {
   @Get()
   findAll() {
     return this.articlesService.findAll();
+  }
+
+  @Get('paginated')
+  findPaginated(
+    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
+    @Query('limit', new DefaultValuePipe(9), ParseIntPipe) limit: number,
+  ) {
+    return this.articlesService.findPaginated(page, limit);
   }
 
   @Get('slug/:slug')

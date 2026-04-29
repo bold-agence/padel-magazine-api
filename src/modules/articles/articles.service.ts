@@ -75,6 +75,52 @@ export class ArticlesService {
     });
   }
 
+  async findPaginated(
+    page = 1,
+    limit = 9,
+  ): Promise<{
+    items: Article[];
+    pagination: {
+      page: number;
+      limit: number;
+      totalItems: number;
+      totalPages: number;
+      hasNextPage: boolean;
+      hasPreviousPage: boolean;
+    };
+  }> {
+    const safePage = Number.isFinite(page) && page > 0 ? page : 1;
+    const safeLimit =
+      Number.isFinite(limit) && limit > 0 ? Math.min(limit, 50) : 9;
+    const [items, totalItems] = await this.articlesRepo.findAndCount({
+      where: { isVisible: true },
+      relations: {
+        sections: true,
+        tags: true,
+        category: true,
+      },
+      order: {
+        createdAt: 'DESC',
+        sections: { order: 'ASC', createdAt: 'ASC' },
+      },
+      skip: (safePage - 1) * safeLimit,
+      take: safeLimit,
+    });
+
+    const totalPages = Math.max(1, Math.ceil(totalItems / safeLimit));
+    return {
+      items,
+      pagination: {
+        page: safePage,
+        limit: safeLimit,
+        totalItems,
+        totalPages,
+        hasNextPage: safePage < totalPages,
+        hasPreviousPage: safePage > 1,
+      },
+    };
+  }
+
   async findOne(id: string): Promise<Article> {
     const article = await this.articlesRepo.findOne({
       where: { id },

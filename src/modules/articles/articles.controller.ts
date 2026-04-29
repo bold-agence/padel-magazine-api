@@ -5,6 +5,7 @@ import {
   Delete,
   Get,
   Param,
+  ParseBoolPipe,
   ParseIntPipe,
   ParseUUIDPipe,
   Patch,
@@ -48,8 +49,15 @@ export class ArticlesController {
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(9), ParseIntPipe) limit: number,
     @Query('category', new DefaultValuePipe('all')) category: string,
+    @Query('includeHidden', new DefaultValuePipe(false), ParseBoolPipe)
+    includeHidden: boolean,
   ) {
-    return this.articlesService.findPaginated(page, limit, category);
+    return this.articlesService.findPaginated(
+      page,
+      limit,
+      category,
+      includeHidden,
+    );
   }
 
   @Get('popular')

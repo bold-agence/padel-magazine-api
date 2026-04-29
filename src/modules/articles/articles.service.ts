@@ -79,6 +79,7 @@ export class ArticlesService {
     page = 1,
     limit = 9,
     category = 'all',
+    includeHidden = false,
   ): Promise<{
     items: Article[];
     pagination: {
@@ -107,8 +108,11 @@ export class ArticlesService {
 
     const baseQuery = this.articlesRepo
       .createQueryBuilder('article')
-      .leftJoin('article.category', 'category')
-      .where('article.isVisible = :isVisible', { isVisible: true });
+      .leftJoin('article.category', 'category');
+
+    if (!includeHidden) {
+      baseQuery.where('article.isVisible = :isVisible', { isVisible: true });
+    }
 
     if (effectiveCategory !== 'all') {
       baseQuery.andWhere('LOWER(category.slug) = :categorySlug', {

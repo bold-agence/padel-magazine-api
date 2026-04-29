@@ -47,8 +47,9 @@ export class ArticlesController {
   findPaginated(
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(9), ParseIntPipe) limit: number,
+    @Query('category', new DefaultValuePipe('all')) category: string,
   ) {
-    return this.articlesService.findPaginated(page, limit);
+    return this.articlesService.findPaginated(page, limit, category);
   }
 
   @Get('slug/:slug')

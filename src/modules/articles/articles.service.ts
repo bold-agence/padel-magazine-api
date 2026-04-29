@@ -78,6 +78,7 @@ export class ArticlesService {
   async findPaginated(
     page = 1,
     limit = 9,
+    category = 'all',
   ): Promise<{
     items: Article[];
     pagination: {
@@ -92,20 +93,61 @@ export class ArticlesService {
     const safePage = Number.isFinite(page) && page > 0 ? page : 1;
     const safeLimit =
       Number.isFinite(limit) && limit > 0 ? Math.min(limit, 50) : 9;
-    const [items, totalItems] = await this.articlesRepo.findAndCount({
-      where: { isVisible: true },
-      relations: {
-        sections: true,
-        tags: true,
-        category: true,
-      },
-      order: {
-        createdAt: 'DESC',
-        sections: { order: 'ASC', createdAt: 'ASC' },
-      },
-      skip: (safePage - 1) * safeLimit,
-      take: safeLimit,
-    });
+    const normalizedCategory = category?.trim().toLowerCase() || 'all';
+    let effectiveCategory = normalizedCategory;
+    if (normalizedCategory !== 'all') {
+      const existingCategory = await this.categoriesRepo
+        .createQueryBuilder('category')
+        .where('LOWER(category.slug) = :slug', { slug: normalizedCategory })
+        .getOne();
+      if (!existingCategory) {
+        effectiveCategory = 'all';
+      }
+    }
+
+    const baseQuery = this.articlesRepo
+      .createQueryBuilder('article')
+      .leftJoin('article.category', 'category')
+      .where('article.isVisible = :isVisible', { isVisible: true });
+
+    if (effectiveCategory !== 'all') {
+      baseQuery.andWhere('LOWER(category.slug) = :categorySlug', {
+        categorySlug: effectiveCategory,
+      });
+    }
+
+    const totalItems = await baseQuery.getCount();
+
+    const pagedRows = await baseQuery
+      .clone()
+      .select('article.id', 'id')
+      .orderBy('article.createdAt', 'DESC')
+      .addOrderBy('article.id', 'DESC')
+      .offset((safePage - 1) * safeLimit)
+      .limit(safeLimit)
+      .getRawMany<{ id: string }>();
+
+    const idOrder = pagedRows.map((row) => row.id);
+    let items: Article[] = [];
+    if (idOrder.length) {
+      const loaded = await this.articlesRepo.find({
+        where: { id: In(idOrder) },
+        relations: {
+          sections: true,
+          tags: true,
+          category: true,
+        },
+        order: {
+          createdAt: 'DESC',
+          sections: { order: 'ASC', createdAt: 'ASC' },
+        },
+      });
+
+      const byId = new Map(loaded.map((article) => [article.id, article]));
+      items = idOrder
+        .map((id) => byId.get(id))
+        .filter((article): article is Article => Boolean(article));
+    }
 
     const totalPages = Math.max(1, Math.ceil(totalItems / safeLimit));
     return {

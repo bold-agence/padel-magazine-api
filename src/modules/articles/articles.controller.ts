@@ -52,6 +52,16 @@ export class ArticlesController {
     return this.articlesService.findPaginated(page, limit, category);
   }
 
+  @Get('popular')
+  findPopular(
+    @Query('limit', new DefaultValuePipe(5), ParseIntPipe) limit: number,
+    @Query('category', new DefaultValuePipe('all')) category: string,
+    @Query('excludeSlug') excludeSlug?: string,
+    @Query('mode', new DefaultValuePipe('popular')) mode?: string,
+  ) {
+    return this.articlesService.findPopular(limit, category, excludeSlug, mode);
+  }
+
   @Get('slug/:slug')
   findBySlug(@Param('slug') slug: string) {
     return this.articlesService.findBySlug(slug);

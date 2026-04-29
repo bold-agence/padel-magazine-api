@@ -250,6 +250,49 @@ export class ArticlesService {
     return [...related, ...fallback];
   }
 
+  async findPopular(
+    limit = 5,
+    category = 'all',
+    excludeSlug?: string,
+    mode: string = 'popular',
+  ): Promise<Article[]> {
+    const safeLimit =
+      Number.isFinite(limit) && limit > 0 ? Math.min(limit, 20) : 5;
+    const normalizedCategory = category?.trim().toLowerCase() || 'all';
+    const normalizedMode = (mode ?? 'popular').trim().toLowerCase();
+
+    const query = this.articlesRepo
+      .createQueryBuilder('article')
+      .leftJoinAndSelect('article.category', 'category')
+      .where('article.isVisible = :visible', { visible: true })
+      .orderBy(
+        normalizedMode === 'trending' ? 'article.date' : 'article.createdAt',
+        'DESC',
+      )
+      .addOrderBy('article.id', 'DESC')
+      .take(safeLimit);
+
+    if (excludeSlug?.trim()) {
+      query.andWhere('article.slug != :excludeSlug', {
+        excludeSlug: excludeSlug.trim(),
+      });
+    }
+
+    if (normalizedCategory !== 'all') {
+      const categoryExists = await this.categoriesRepo
+        .createQueryBuilder('category')
+        .where('LOWER(category.slug) = :slug', { slug: normalizedCategory })
+        .getOne();
+      if (categoryExists) {
+        query.andWhere('LOWER(category.slug) = :slug', {
+          slug: normalizedCategory,
+        });
+      }
+    }
+
+    return query.getMany();
+  }
+
   async update(id: string, dto: UpdateArticleDto): Promise<Article> {
     const article = await this.findOne(id);
 

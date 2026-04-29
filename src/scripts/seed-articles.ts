@@ -5,7 +5,10 @@ import { AppModule } from '../app.module';
 import { Article } from '../modules/articles/entities/article.entity';
 import { ArticleCategory } from '../modules/articles/entities/article-category.entity';
 import { Tag } from '../modules/articles/entities/tag.entity';
-import { Section, SectionType } from '../modules/articles/entities/section.entity';
+import {
+  Section,
+  SectionType,
+} from '../modules/articles/entities/section.entity';
 
 const DEFAULT_ARTICLES_PER_CATEGORY = 10;
 
@@ -114,6 +117,8 @@ async function bootstrap() {
           author: 'BOLD Padel Bot',
           date,
           readingTime: `${4 + index} min`,
+          viewCount: Math.max(0, (articlesPerCategory - index + 1) * 17),
+          lastViewedAt: new Date(),
           category,
           tags: [...tagEntities, ...categoryTags],
           sections,

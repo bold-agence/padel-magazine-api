@@ -67,6 +67,13 @@ export class ArticlesController {
     return this.articlesService.findBySlug(slug);
   }
 
+  @Post('slug/:slug/view')
+  trackViewBySlug(@Param('slug') slug: string) {
+    return this.articlesService
+      .trackViewBySlug(slug)
+      .then(() => ({ success: true }));
+  }
+
   @Get('slug/:slug/related')
   findRelatedBySlug(@Param('slug') slug: string) {
     return this.articlesService.findRelatedBySlug(slug);

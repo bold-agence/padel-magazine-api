@@ -203,6 +203,19 @@ export class ArticlesService {
     return article;
   }
 
+  async trackViewBySlug(slug: string): Promise<void> {
+    const article = await this.articlesRepo.findOne({
+      where: { slug, isVisible: true },
+    });
+
+    if (!article) {
+      throw new NotFoundException('Article not found');
+    }
+
+    await this.articlesRepo.increment({ id: article.id }, 'viewCount', 1);
+    await this.articlesRepo.update(article.id, { lastViewedAt: new Date() });
+  }
+
   async findRelatedBySlug(slug: string, limit = 3): Promise<Article[]> {
     const currentArticle = await this.articlesRepo.findOne({
       where: { slug, isVisible: true },
@@ -266,9 +279,11 @@ export class ArticlesService {
       .leftJoinAndSelect('article.category', 'category')
       .where('article.isVisible = :visible', { visible: true })
       .orderBy(
-        normalizedMode === 'trending' ? 'article.date' : 'article.createdAt',
+        normalizedMode === 'trending' ? 'article.date' : 'article.viewCount',
         'DESC',
       )
+      .addOrderBy('article.lastViewedAt', 'DESC')
+      .addOrderBy('article.createdAt', 'DESC')
       .addOrderBy('article.id', 'DESC')
       .take(safeLimit);
 

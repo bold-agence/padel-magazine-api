@@ -34,6 +34,12 @@ export class Article extends BaseEntity {
   @Column({ nullable: true })
   bannerImage?: string;
 
+  @Column({ type: 'int', default: 0 })
+  viewCount: number;
+
+  @Column({ type: 'timestamptz', nullable: true })
+  lastViewedAt?: Date | null;
+
   @OneToMany(() => Section, (section) => section.article, {
     cascade: true,
   })

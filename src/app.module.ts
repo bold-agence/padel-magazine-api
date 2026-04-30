@@ -10,6 +10,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { PlayersModule } from './modules/players/players.module';
 import { MinioModule } from './modules/minio/minio.module';
 import { ArticlesModule } from './modules/articles/articles.module';
+import { ClientContentModule } from './modules/client-content/client-content.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { ArticlesModule } from './modules/articles/articles.module';
     AuthModule,
     PlayersModule,
     ArticlesModule,
+    ClientContentModule,
   ],
   controllers: [AppController],
   providers: [AppService],

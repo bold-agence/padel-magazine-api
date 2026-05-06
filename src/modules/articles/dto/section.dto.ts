@@ -5,7 +5,6 @@ import {
   IsObject,
   IsOptional,
   IsString,
-  IsUrl,
   MaxLength,
   Min,
 } from 'class-validator';
@@ -31,7 +30,7 @@ export class SectionDto {
   @IsOptional()
   headingLevel?: number;
 
-  @IsUrl()
+  @IsString()
   @MaxLength(2048)
   @IsOptional()
   imageUrl?: string;

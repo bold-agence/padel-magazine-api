@@ -1,14 +1,32 @@
-// src/database/database.module.ts
 import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigService } from '@nestjs/config';
+import { TypeOrmModule } from '@nestjs/typeorm';
+
+type AppConfig = {
+  nodeEnv: 'development' | 'production' | 'test';
+};
+
+type DatabaseConfig = {
+  host: string;
+  port: number;
+  user: string;
+  pass: string;
+  name: string;
+};
 
 @Module({
   imports: [
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => {
-        const db = config.get('database');
+        const db = config.get<DatabaseConfig>('database');
+        const app = config.get<AppConfig>('app');
+        const isProd = app?.nodeEnv === 'production';
+
+        if (!db) {
+          throw new Error('Config "database" manquante');
+        }
+
         return {
           type: 'postgres' as const,
           host: db.host,
@@ -17,7 +35,10 @@ import { ConfigService } from '@nestjs/config';
           password: db.pass,
           database: db.name,
           entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-          synchronize: true, // à activer en dev si tu veux, mais pas en prod
+          migrations: [__dirname + '/migrations/*{.ts,.js}'],
+          synchronize: !isProd,
+          migrationsRun:
+            isProd && process.env.TYPEORM_MIGRATIONS_RUN === 'true',
         };
       },
     }),

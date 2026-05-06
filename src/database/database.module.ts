@@ -36,7 +36,7 @@ type DatabaseConfig = {
           database: db.name,
           entities: [__dirname + '/../**/*.entity{.ts,.js}'],
           migrations: [__dirname + '/migrations/*{.ts,.js}'],
-          synchronize: !isProd,
+          synchronize: false,
           migrationsRun:
             isProd && process.env.TYPEORM_MIGRATIONS_RUN === 'true',
         };

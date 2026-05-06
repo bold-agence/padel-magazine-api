@@ -1,9 +1,13 @@
 import 'reflect-metadata';
 import 'dotenv/config';
-import { join } from 'path';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { DataSource } from 'typeorm';
 
 const isProd = (process.env.NODE_ENV ?? 'development') === 'production';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 export default new DataSource({
   type: 'postgres',
@@ -14,7 +18,7 @@ export default new DataSource({
   database: process.env.DB_NAME,
   entities: [join(__dirname, '..', '**', '*.entity{.ts,.js}')],
   migrations: [join(__dirname, 'migrations', '*{.ts,.js}')],
-  synchronize: !isProd, // jamais en prod
+  synchronize: !isProd,
   migrationsRun: isProd && process.env.TYPEORM_MIGRATIONS_RUN === 'true',
 });
 

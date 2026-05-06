@@ -5,8 +5,8 @@ export class CreateAdImageDto {
   @MaxLength(200)
   title: string;
 
-  @IsIn(['header_main', 'sidebar_top', 'sidebar_bottom'])
-  slot: 'header_main' | 'sidebar_top' | 'sidebar_bottom';
+  @IsIn(['header_main', 'home_leaderboard', 'sidebar_top', 'sidebar_bottom'])
+  slot: 'header_main' | 'home_leaderboard' | 'sidebar_top' | 'sidebar_bottom';
 
   @IsString()
   @MaxLength(1000)

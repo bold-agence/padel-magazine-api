@@ -76,7 +76,10 @@ export class ClientContentController {
     activeOnly?: boolean,
   ) {
     const safeSlot =
-      slot === 'header_main' || slot === 'sidebar_top' || slot === 'sidebar_bottom'
+      slot === 'header_main' ||
+      slot === 'home_leaderboard' ||
+      slot === 'sidebar_top' ||
+      slot === 'sidebar_bottom'
         ? slot
         : undefined;
     return this.clientContentService.findAllAdImages(safeSlot, activeOnly);

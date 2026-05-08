@@ -11,6 +11,8 @@ import { PlayersModule } from './modules/players/players.module';
 import { MinioModule } from './modules/minio/minio.module';
 import { ArticlesModule } from './modules/articles/articles.module';
 import { ClientContentModule } from './modules/client-content/client-content.module';
+import { ClubsModule } from './modules/clubs/clubs.module';
+import { PortraitsModule } from './modules/portraits/portraits.module';
 
 @Module({
   imports: [
@@ -23,9 +25,11 @@ import { ClientContentModule } from './modules/client-content/client-content.mod
     MinioModule,
     UsersModule,
     AuthModule,
+    ClubsModule,
     PlayersModule,
     ArticlesModule,
     ClientContentModule,
+    PortraitsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

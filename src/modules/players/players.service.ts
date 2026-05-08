@@ -10,6 +10,7 @@ import { Player } from './entities/player.entity';
 import { CreatePlayerDto } from './dto/create-player.dto';
 import { UpdatePlayerDto } from './dto/update-player.dto';
 import { MinioService } from '../minio/minio.service';
+import { Club } from '../clubs/entities/club.entity';
 
 @Injectable()
 export class PlayersService {
@@ -18,6 +19,8 @@ export class PlayersService {
   constructor(
     @InjectRepository(Player)
     private readonly repo: Repository<Player>,
+    @InjectRepository(Club)
+    private readonly clubsRepo: Repository<Club>,
     private readonly minioService: MinioService,
   ) {}
 
@@ -45,21 +48,41 @@ export class PlayersService {
       );
     }
 
+    let club: Club | null | undefined;
+    if (dto.clubId) {
+      club = await this.clubsRepo.findOne({ where: { id: dto.clubId } });
+      if (!club) {
+        throw new NotFoundException('Club not found');
+      }
+    }
+
     const player = this.repo.create({
-      ...dto,
+      slug: dto.slug,
+      name: dto.name,
+      nationality: dto.nationality,
       profilePhoto: profilePhotoUrl,
+      club: club ?? null,
     });
     const savedPlayer = await this.repo.save(player);
-    this.logger.log(`Player created successfully (id=${savedPlayer.id}, slug=${savedPlayer.slug})`);
-    return savedPlayer;
+    this.logger.log(
+      `Player created successfully (id=${savedPlayer.id}, slug=${savedPlayer.slug})`,
+    );
+    const reloaded = await this.repo.findOne({
+      where: { id: savedPlayer.id },
+      relations: { club: true },
+    });
+    return reloaded ?? savedPlayer;
   }
 
   async findAll(): Promise<Player[]> {
-    return this.repo.find({ order: { createdAt: 'DESC' } });
+    return this.repo.find({ relations: { club: true }, order: { createdAt: 'DESC' } });
   }
 
   async findOne(id: string): Promise<Player> {
-    const player = await this.repo.findOne({ where: { id } });
+    const player = await this.repo.findOne({
+      where: { id },
+      relations: { club: true },
+    });
     if (!player) {
       throw new NotFoundException('Player not found');
     }
@@ -100,11 +123,30 @@ export class PlayersService {
       dto.profilePhoto = null;
     }
 
+    if (dto.clubId !== undefined) {
+      if (dto.clubId === null) {
+        player.club = null;
+      } else {
+        const club = await this.clubsRepo.findOne({ where: { id: dto.clubId } });
+        if (!club) {
+          throw new NotFoundException('Club not found');
+        }
+        player.club = club;
+      }
+      delete (dto as unknown as { clubId?: string | null }).clubId;
+    }
+
     delete dto.removeProfilePhoto;
     Object.assign(player, dto);
     const updated = await this.repo.save(player);
-    this.logger.log(`Player updated successfully (id=${updated.id}, slug=${updated.slug})`);
-    return updated;
+    this.logger.log(
+      `Player updated successfully (id=${updated.id}, slug=${updated.slug})`,
+    );
+    const reloaded = await this.repo.findOne({
+      where: { id: updated.id },
+      relations: { club: true },
+    });
+    return reloaded ?? updated;
   }
 
   async remove(id: string): Promise<void> {

@@ -189,7 +189,7 @@ export class ArticlesService {
 
   async findBySlug(slug: string): Promise<Article> {
     const article = await this.articlesRepo.findOne({
-      where: { slug, isVisible: true },
+      where: { slug },
       relations: {
         sections: true,
         tags: true,

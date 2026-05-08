@@ -13,6 +13,7 @@
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
     "seed:articles": "npm run build && node dist/scripts/seed-articles.js",
+    "seed:portraits": "npm run build && node dist/scripts/seed-portraits.js",
     "migration:generate": "npm run build && typeorm -d dist/database/data-source.js migration:generate src/database/migrations/InitSchema",
     "migration:run": "npm run build && typeorm -d dist/database/data-source.js migration:run",
     "migration:revert": "npm run build && typeorm -d dist/database/data-source.js migration:revert",

@@ -4,9 +4,10 @@ import { PlayersController } from './players.controller';
 import { PlayersService } from './players.service';
 import { Player } from './entities/player.entity';
 import { MinioModule } from '../minio/minio.module';
+import { Club } from '../clubs/entities/club.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Player]), MinioModule],
+  imports: [TypeOrmModule.forFeature([Player, Club]), MinioModule],
   controllers: [PlayersController],
   providers: [PlayersService],
   exports: [PlayersService],

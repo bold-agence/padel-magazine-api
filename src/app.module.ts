@@ -14,6 +14,7 @@ import { ClientContentModule } from './modules/client-content/client-content.mod
 import { ClubsModule } from './modules/clubs/clubs.module';
 import { PortraitsModule } from './modules/portraits/portraits.module';
 import { ClassementsModule } from './modules/classements/classements.module';
+import { VideosModule } from './modules/videos/videos.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ClassementsModule } from './modules/classements/classements.module';
     ClientContentModule,
     PortraitsModule,
     ClassementsModule,
+    VideosModule,
   ],
   controllers: [AppController],
   providers: [AppService],

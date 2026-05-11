@@ -13,6 +13,7 @@ import { ArticlesModule } from './modules/articles/articles.module';
 import { ClientContentModule } from './modules/client-content/client-content.module';
 import { ClubsModule } from './modules/clubs/clubs.module';
 import { PortraitsModule } from './modules/portraits/portraits.module';
+import { ClassementsModule } from './modules/classements/classements.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { PortraitsModule } from './modules/portraits/portraits.module';
     ArticlesModule,
     ClientContentModule,
     PortraitsModule,
+    ClassementsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

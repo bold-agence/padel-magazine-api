@@ -80,6 +80,8 @@ export class ArticlesService {
     limit = 9,
     category = 'all',
     includeHidden = false,
+    onlyHidden = false,
+    q?: string,
   ): Promise<{
     items: Article[];
     pagination: {
@@ -110,14 +112,28 @@ export class ArticlesService {
       .createQueryBuilder('article')
       .leftJoin('article.category', 'category');
 
-    if (!includeHidden) {
-      baseQuery.where('article.isVisible = :isVisible', { isVisible: true });
+    if (onlyHidden) {
+      baseQuery.where('article.isVisible = :articleIsVisible', {
+        articleIsVisible: false,
+      });
+    } else if (!includeHidden) {
+      baseQuery.where('article.isVisible = :articleIsVisible', {
+        articleIsVisible: true,
+      });
     }
 
     if (effectiveCategory !== 'all') {
       baseQuery.andWhere('LOWER(category.slug) = :categorySlug', {
         categorySlug: effectiveCategory,
       });
+    }
+
+    const searchTerm = typeof q === 'string' ? q.trim() : '';
+    if (searchTerm.length > 0) {
+      baseQuery.andWhere(
+        '(LOWER(article.title) LIKE :search OR LOWER(article.slug) LIKE :search)',
+        { search: `%${searchTerm.toLowerCase()}%` },
+      );
     }
 
     const totalItems = await baseQuery.getCount();

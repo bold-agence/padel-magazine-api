@@ -51,12 +51,17 @@ export class ArticlesController {
     @Query('category', new DefaultValuePipe('all')) category: string,
     @Query('includeHidden', new DefaultValuePipe(false), ParseBoolPipe)
     includeHidden: boolean,
+    @Query('onlyHidden', new DefaultValuePipe(false), ParseBoolPipe)
+    onlyHidden: boolean,
+    @Query('q') q?: string,
   ) {
     return this.articlesService.findPaginated(
       page,
       limit,
       category,
       includeHidden,
+      onlyHidden,
+      q,
     );
   }
 

@@ -15,6 +15,7 @@ import { ClubsModule } from './modules/clubs/clubs.module';
 import { PortraitsModule } from './modules/portraits/portraits.module';
 import { ClassementsModule } from './modules/classements/classements.module';
 import { VideosModule } from './modules/videos/videos.module';
+import { TournamentsModule } from './modules/tournaments/tournaments.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { VideosModule } from './modules/videos/videos.module';
     PortraitsModule,
     ClassementsModule,
     VideosModule,
+    TournamentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

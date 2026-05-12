@@ -37,8 +37,11 @@ type DatabaseConfig = {
           entities: [__dirname + '/../**/*.entity{.ts,.js}'],
           migrations: [__dirname + '/migrations/*{.ts,.js}'],
           synchronize: false,
-          migrationsRun:
-            isProd && process.env.TYPEORM_MIGRATIONS_RUN === 'true',
+          // In dev: auto-run pending migrations on app start (safe because
+          // every migration is idempotent). In prod: opt-in via env var.
+          migrationsRun: isProd
+            ? process.env.TYPEORM_MIGRATIONS_RUN === 'true'
+            : true,
         };
       },
     }),

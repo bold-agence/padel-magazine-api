@@ -16,6 +16,7 @@ import { PortraitsModule } from './modules/portraits/portraits.module';
 import { ClassementsModule } from './modules/classements/classements.module';
 import { VideosModule } from './modules/videos/videos.module';
 import { TournamentsModule } from './modules/tournaments/tournaments.module';
+import { EventsModule } from './modules/events/events.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { TournamentsModule } from './modules/tournaments/tournaments.module';
     ClassementsModule,
     VideosModule,
     TournamentsModule,
+    EventsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

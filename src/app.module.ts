@@ -17,6 +17,8 @@ import { ClassementsModule } from './modules/classements/classements.module';
 import { VideosModule } from './modules/videos/videos.module';
 import { TournamentsModule } from './modules/tournaments/tournaments.module';
 import { EventsModule } from './modules/events/events.module';
+import { FipRankingsModule } from './modules/fip-rankings/fip-rankings.module';
+import { LatestResultsModule } from './modules/latest-results/latest-results.module';
 
 @Module({
   imports: [
@@ -38,6 +40,8 @@ import { EventsModule } from './modules/events/events.module';
     VideosModule,
     TournamentsModule,
     EventsModule,
+    FipRankingsModule,
+    LatestResultsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -19,6 +19,7 @@ import { TournamentsModule } from './modules/tournaments/tournaments.module';
 import { EventsModule } from './modules/events/events.module';
 import { FipRankingsModule } from './modules/fip-rankings/fip-rankings.module';
 import { LatestResultsModule } from './modules/latest-results/latest-results.module';
+import { LivesModule } from './modules/lives/lives.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { LatestResultsModule } from './modules/latest-results/latest-results.mod
     EventsModule,
     FipRankingsModule,
     LatestResultsModule,
+    LivesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

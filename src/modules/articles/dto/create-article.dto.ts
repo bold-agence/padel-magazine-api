@@ -53,6 +53,13 @@ export class CreateArticleDto {
 
   @IsArray()
   @ArrayUnique()
+  @IsUUID('4', { each: true })
+  @ArrayMaxSize(10)
+  @IsOptional()
+  categoryIds?: string[];
+
+  @IsArray()
+  @ArrayUnique()
   @IsString({ each: true })
   @MaxLength(50, { each: true })
   @IsOptional()

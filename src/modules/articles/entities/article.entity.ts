@@ -53,9 +53,17 @@ export class Article extends BaseEntity {
   })
   tags: Tag[];
 
-  @ManyToOne(() => ArticleCategory, (category) => category.articles, {
+  @ManyToOne(() => ArticleCategory, (category) => category.primaryArticles, {
     nullable: true,
     onDelete: 'SET NULL',
   })
   category?: ArticleCategory | null;
+
+  @ManyToMany(() => ArticleCategory, (category) => category.articles)
+  @JoinTable({
+    name: 'articles_categories',
+    joinColumn: { name: 'article_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'category_id', referencedColumnName: 'id' },
+  })
+  categories: ArticleCategory[];
 }

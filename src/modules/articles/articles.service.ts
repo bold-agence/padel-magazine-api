@@ -40,7 +40,11 @@ export class ArticlesService {
       throw new ConflictException('Slug already exists');
     }
 
-    const category = await this.resolveCategory(dto.categoryId);
+    const categories = await this.resolveCategories(
+      dto.categoryIds,
+      dto.categoryId,
+    );
+    const category = categories[0] ?? null;
     const tags = await this.resolveTags(dto.tags);
     const sections = this.mapSections(dto.sections);
 
@@ -53,26 +57,29 @@ export class ArticlesService {
       readingTime: dto.readingTime,
       bannerImage: dto.bannerImage,
       category,
+      categories,
       tags,
       sections,
     });
 
-    return this.articlesRepo.save(article);
+    return this.hydratePrimaryCategory(await this.articlesRepo.save(article));
   }
 
   async findAll(): Promise<Article[]> {
-    return this.articlesRepo.find({
+    const articles = await this.articlesRepo.find({
       where: { isVisible: true },
       relations: {
         sections: true,
         tags: true,
         category: true,
+        categories: true,
       },
       order: {
         createdAt: 'DESC',
         sections: { order: 'ASC', createdAt: 'ASC' },
       },
     });
+    return this.hydratePrimaryCategories(articles);
   }
 
   async findPaginated(
@@ -110,7 +117,9 @@ export class ArticlesService {
 
     const baseQuery = this.articlesRepo
       .createQueryBuilder('article')
-      .leftJoin('article.category', 'category');
+      .leftJoin('article.category', 'primaryCategory')
+      .leftJoin('article.categories', 'filterCategory')
+      .distinct(true);
 
     if (onlyHidden) {
       baseQuery.where('article.isVisible = :articleIsVisible', {
@@ -123,9 +132,10 @@ export class ArticlesService {
     }
 
     if (effectiveCategory !== 'all') {
-      baseQuery.andWhere('LOWER(category.slug) = :categorySlug', {
-        categorySlug: effectiveCategory,
-      });
+      baseQuery.andWhere(
+        '(LOWER(primaryCategory.slug) = :categorySlug OR LOWER(filterCategory.slug) = :categorySlug)',
+        { categorySlug: effectiveCategory },
+      );
     }
 
     const searchTerm = typeof q === 'string' ? q.trim() : '';
@@ -141,6 +151,7 @@ export class ArticlesService {
     const pagedRows = await baseQuery
       .clone()
       .select('article.id', 'id')
+      .addSelect('article.createdAt', 'createdAt')
       .orderBy('article.createdAt', 'DESC')
       .addOrderBy('article.id', 'DESC')
       .offset((safePage - 1) * safeLimit)
@@ -156,6 +167,7 @@ export class ArticlesService {
           sections: true,
           tags: true,
           category: true,
+          categories: true,
         },
         order: {
           createdAt: 'DESC',
@@ -167,6 +179,7 @@ export class ArticlesService {
       items = idOrder
         .map((id) => byId.get(id))
         .filter((article): article is Article => Boolean(article));
+      items = this.hydratePrimaryCategories(items);
     }
 
     const totalPages = Math.max(1, Math.ceil(totalItems / safeLimit));
@@ -190,6 +203,7 @@ export class ArticlesService {
         sections: true,
         tags: true,
         category: true,
+        categories: true,
       },
       order: {
         sections: { order: 'ASC', createdAt: 'ASC' },
@@ -200,7 +214,7 @@ export class ArticlesService {
       throw new NotFoundException('Article not found');
     }
 
-    return article;
+    return this.hydratePrimaryCategory(article);
   }
 
   async findBySlug(slug: string): Promise<Article> {
@@ -210,6 +224,7 @@ export class ArticlesService {
         sections: true,
         tags: true,
         category: true,
+        categories: true,
       },
       order: {
         sections: { order: 'ASC', createdAt: 'ASC' },
@@ -220,7 +235,7 @@ export class ArticlesService {
       throw new NotFoundException('Article not found');
     }
 
-    return article;
+    return this.hydratePrimaryCategory(article);
   }
 
   async trackViewBySlug(slug: string): Promise<void> {
@@ -239,48 +254,58 @@ export class ArticlesService {
   async findRelatedBySlug(slug: string, limit = 3): Promise<Article[]> {
     const currentArticle = await this.articlesRepo.findOne({
       where: { slug, isVisible: true },
-      relations: { category: true },
+      relations: { category: true, categories: true },
     });
 
     if (!currentArticle) {
       throw new NotFoundException('Article not found');
     }
 
+    const currentCategoryIds = this.getArticleCategoryIds(currentArticle);
+
     const query = this.articlesRepo
       .createQueryBuilder('article')
       .leftJoinAndSelect('article.tags', 'tags')
-      .leftJoinAndSelect('article.category', 'category')
+      .leftJoinAndSelect('article.category', 'primaryCategory')
+      .leftJoinAndSelect('article.categories', 'relatedCategories')
       .where('article.isVisible = :visible', { visible: true })
       .andWhere('article.id != :currentId', { currentId: currentArticle.id })
       .orderBy('article.createdAt', 'DESC')
+      .distinct(true)
       .take(limit);
 
-    if (currentArticle.category?.id) {
-      query.andWhere('article.categoryId = :categoryId', {
-        categoryId: currentArticle.category.id,
-      });
+    if (currentCategoryIds.length) {
+      query.andWhere(
+        '(primaryCategory.id IN (:...categoryIds) OR relatedCategories.id IN (:...categoryIds))',
+        { categoryIds: currentCategoryIds },
+      );
     }
 
-    const related = await query.getMany();
-    if (related.length >= limit || !currentArticle.category?.id) {
+    const related = this.hydratePrimaryCategories(await query.getMany());
+    if (related.length >= limit || !currentCategoryIds.length) {
       return related;
     }
 
     const missing = limit - related.length;
-    const fallback = await this.articlesRepo
+    const fallbackQuery = this.articlesRepo
       .createQueryBuilder('article')
       .leftJoinAndSelect('article.tags', 'tags')
-      .leftJoinAndSelect('article.category', 'category')
+      .leftJoinAndSelect('article.category', 'primaryCategory')
+      .leftJoinAndSelect('article.categories', 'relatedCategories')
       .where('article.isVisible = :visible', { visible: true })
       .andWhere('article.id != :currentId', { currentId: currentArticle.id })
-      .andWhere('article.categoryId != :categoryId', {
-        categoryId: currentArticle.category.id,
-      })
       .orderBy('article.createdAt', 'DESC')
-      .take(missing)
-      .getMany();
+      .take(missing);
 
-    return [...related, ...fallback];
+    if (related.length) {
+      fallbackQuery.andWhere('article.id NOT IN (:...relatedIds)', {
+        relatedIds: related.map((article) => article.id),
+      });
+    }
+
+    const fallback = await fallbackQuery.getMany();
+
+    return [...related, ...this.hydratePrimaryCategories(fallback)];
   }
 
   async findPopular(
@@ -296,8 +321,10 @@ export class ArticlesService {
 
     const query = this.articlesRepo
       .createQueryBuilder('article')
-      .leftJoinAndSelect('article.category', 'category')
+      .leftJoinAndSelect('article.category', 'primaryCategory')
+      .leftJoinAndSelect('article.categories', 'filterCategories')
       .where('article.isVisible = :visible', { visible: true })
+      .distinct(true)
       .orderBy(
         normalizedMode === 'trending' ? 'article.date' : 'article.viewCount',
         'DESC',
@@ -319,13 +346,14 @@ export class ArticlesService {
         .where('LOWER(category.slug) = :slug', { slug: normalizedCategory })
         .getOne();
       if (categoryExists) {
-        query.andWhere('LOWER(category.slug) = :slug', {
-          slug: normalizedCategory,
-        });
+        query.andWhere(
+          '(LOWER(primaryCategory.slug) = :slug OR LOWER(filterCategories.slug) = :slug)',
+          { slug: normalizedCategory },
+        );
       }
     }
 
-    return query.getMany();
+    return this.hydratePrimaryCategories(await query.getMany());
   }
 
   async update(id: string, dto: UpdateArticleDto): Promise<Article> {
@@ -340,8 +368,13 @@ export class ArticlesService {
       }
     }
 
-    if (dto.categoryId !== undefined) {
-      article.category = await this.resolveCategory(dto.categoryId);
+    if (dto.categoryIds !== undefined || dto.categoryId !== undefined) {
+      const categories = await this.resolveCategories(
+        dto.categoryIds,
+        dto.categoryId,
+      );
+      article.categories = categories;
+      article.category = categories[0] ?? null;
     }
 
     if (dto.tags !== undefined) {
@@ -364,7 +397,7 @@ export class ArticlesService {
     if (dto.readingTime !== undefined) article.readingTime = dto.readingTime;
     if (dto.bannerImage !== undefined) article.bannerImage = dto.bannerImage;
 
-    return this.articlesRepo.save(article);
+    return this.hydratePrimaryCategory(await this.articlesRepo.save(article));
   }
 
   async remove(id: string): Promise<void> {
@@ -432,5 +465,54 @@ export class ArticlesService {
     }
 
     return category;
+  }
+
+  private async resolveCategories(
+    categoryIds?: string[],
+    legacyCategoryId?: string | null,
+  ): Promise<ArticleCategory[]> {
+    const idsSource =
+      categoryIds !== undefined
+        ? categoryIds
+        : legacyCategoryId
+          ? [legacyCategoryId]
+          : [];
+    const ids = [...new Set(idsSource.map((id) => id.trim()).filter(Boolean))];
+
+    if (!ids.length) {
+      return [];
+    }
+
+    const categories = await this.categoriesRepo.find({
+      where: { id: In(ids) },
+    });
+
+    if (categories.length !== ids.length) {
+      throw new NotFoundException('Article category not found');
+    }
+
+    const byId = new Map(categories.map((category) => [category.id, category]));
+    return ids
+      .map((id) => byId.get(id))
+      .filter((category): category is ArticleCategory => Boolean(category));
+  }
+
+  private hydratePrimaryCategory(article: Article): Article {
+    article.categories = article.categories ?? [];
+    article.category = article.category ?? article.categories[0] ?? null;
+    return article;
+  }
+
+  private hydratePrimaryCategories(articles: Article[]): Article[] {
+    return articles.map((article) => this.hydratePrimaryCategory(article));
+  }
+
+  private getArticleCategoryIds(article: Article): string[] {
+    return [
+      ...new Set([
+        article.category?.id,
+        ...(article.categories ?? []).map((category) => category.id),
+      ].filter((id): id is string => Boolean(id))),
+    ];
   }
 }

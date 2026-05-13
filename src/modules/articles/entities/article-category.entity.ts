@@ -1,4 +1,4 @@
-import { Column, Entity, OneToMany } from 'typeorm';
+import { Column, Entity, ManyToMany, OneToMany } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { Article } from './article.entity';
 
@@ -14,5 +14,8 @@ export class ArticleCategory extends BaseEntity {
   color: string;
 
   @OneToMany(() => Article, (article) => article.category)
+  primaryArticles: Article[];
+
+  @ManyToMany(() => Article, (article) => article.categories)
   articles: Article[];
 }

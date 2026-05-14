@@ -16,6 +16,16 @@ export class Classement extends BaseEntity {
   @Column({ type: 'varchar', length: 120, nullable: true })
   pointsPrevLabel?: string | null;
 
+  /** Photo 1er (URL MinIO / publique) */
+  @Column({ type: 'varchar', length: 2048, nullable: true })
+  podiumFirstImageUrl?: string | null;
+
+  @Column({ type: 'varchar', length: 2048, nullable: true })
+  podiumSecondImageUrl?: string | null;
+
+  @Column({ type: 'varchar', length: 2048, nullable: true })
+  podiumThirdImageUrl?: string | null;
+
   @OneToMany(() => ClassementLine, (line) => line.classement)
   lines: ClassementLine[];
 }

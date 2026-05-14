@@ -141,7 +141,7 @@ export class ArticlesService {
     const searchTerm = typeof q === 'string' ? q.trim() : '';
     if (searchTerm.length > 0) {
       baseQuery.andWhere(
-        '(LOWER(article.title) LIKE :search OR LOWER(article.slug) LIKE :search)',
+        '(LOWER(article.title) LIKE :search OR LOWER(article.slug) LIKE :search OR LOWER(article.author) LIKE :search)',
         { search: `%${searchTerm.toLowerCase()}%` },
       );
     }

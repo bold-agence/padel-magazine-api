@@ -9,14 +9,17 @@ import {
   Patch,
   Post,
   UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
+  ValidationPipe,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FileFieldsInterceptor, FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { ClassementsService } from './classements.service';
 import { CreateClassementDto } from './dto/create-classement.dto';
 import { UpdateClassementDto } from './dto/update-classement.dto';
+import { UpdateClassementPodiumDto } from './dto/update-classement-podium.dto';
 
 @Controller('classements')
 export class ClassementsController {
@@ -41,6 +44,32 @@ export class ClassementsController {
   @Post()
   create(@Body() dto: CreateClassementDto) {
     return this.classementsService.create(dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch(':id/podium-images')
+  @UseInterceptors(
+    FileFieldsInterceptor(
+      [
+        { name: 'podiumFirst', maxCount: 1 },
+        { name: 'podiumSecond', maxCount: 1 },
+        { name: 'podiumThird', maxCount: 1 },
+      ],
+      { limits: { fileSize: 5 * 1024 * 1024 } },
+    ),
+  )
+  updatePodiumImages(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: false }))
+    dto: UpdateClassementPodiumDto = {},
+    @UploadedFiles()
+    files?: {
+      podiumFirst?: Express.Multer.File[];
+      podiumSecond?: Express.Multer.File[];
+      podiumThird?: Express.Multer.File[];
+    },
+  ) {
+    return this.classementsService.updatePodiumImages(id, files ?? {}, dto);
   }
 
   @UseGuards(JwtAuthGuard)

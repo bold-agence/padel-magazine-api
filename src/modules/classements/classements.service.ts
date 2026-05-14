@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
@@ -9,6 +10,8 @@ import { Classement } from './entities/classement.entity';
 import { ClassementLine } from './entities/classement-line.entity';
 import { CreateClassementDto } from './dto/create-classement.dto';
 import { UpdateClassementDto } from './dto/update-classement.dto';
+import { UpdateClassementPodiumDto } from './dto/update-classement-podium.dto';
+import { MinioService } from '../minio/minio.service';
 import {
   ClassementLineInput,
   parseClassementExcelBuffer,
@@ -20,6 +23,9 @@ export type ClassementSummary = {
   title: string;
   pointsNowLabel: string | null;
   pointsPrevLabel: string | null;
+  podiumFirstImageUrl: string | null;
+  podiumSecondImageUrl: string | null;
+  podiumThirdImageUrl: string | null;
   lineCount: number;
   updatedAt: Date;
 };
@@ -28,11 +34,19 @@ export type ClassementWithLines = Classement & { lines: ClassementLine[] };
 
 @Injectable()
 export class ClassementsService {
+  private static readonly PODIUM_IMAGE_MIMES = new Set([
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+    'image/gif',
+  ]);
+
   constructor(
     @InjectRepository(Classement)
     private readonly classementsRepo: Repository<Classement>,
     @InjectRepository(ClassementLine)
     private readonly linesRepo: Repository<ClassementLine>,
+    private readonly minioService: MinioService,
   ) {}
 
   async findAllSummaries(): Promise<ClassementSummary[]> {
@@ -61,6 +75,9 @@ export class ClassementsService {
       title: c.title,
       pointsNowLabel: c.pointsNowLabel ?? null,
       pointsPrevLabel: c.pointsPrevLabel ?? null,
+      podiumFirstImageUrl: c.podiumFirstImageUrl ?? null,
+      podiumSecondImageUrl: c.podiumSecondImageUrl ?? null,
+      podiumThirdImageUrl: c.podiumThirdImageUrl ?? null,
       lineCount: countMap.get(c.id) ?? 0,
       updatedAt: c.updatedAt,
     }));
@@ -177,5 +194,68 @@ export class ClassementsService {
   }> {
     const lines = parseClassementExcelBuffer(buffer);
     return this.replaceLinesFromInputs(classementId, lines);
+  }
+
+  async updatePodiumImages(
+    id: string,
+    files: {
+      podiumFirst?: Express.Multer.File[];
+      podiumSecond?: Express.Multer.File[];
+      podiumThird?: Express.Multer.File[];
+    },
+    dto: UpdateClassementPodiumDto,
+  ): Promise<ClassementWithLines> {
+    const classement = await this.classementsRepo.findOne({ where: { id } });
+    if (!classement) {
+      throw new NotFoundException('Classement introuvable');
+    }
+
+    const first = files.podiumFirst?.[0];
+    const second = files.podiumSecond?.[0];
+    const third = files.podiumThird?.[0];
+
+    if (first) {
+      this.assertPodiumImage(first);
+      classement.podiumFirstImageUrl = await this.minioService.uploadFile(
+        first,
+        'classements',
+      );
+    } else if (dto.removePodiumFirst === 'true') {
+      classement.podiumFirstImageUrl = null;
+    }
+
+    if (second) {
+      this.assertPodiumImage(second);
+      classement.podiumSecondImageUrl = await this.minioService.uploadFile(
+        second,
+        'classements',
+      );
+    } else if (dto.removePodiumSecond === 'true') {
+      classement.podiumSecondImageUrl = null;
+    }
+
+    if (third) {
+      this.assertPodiumImage(third);
+      classement.podiumThirdImageUrl = await this.minioService.uploadFile(
+        third,
+        'classements',
+      );
+    } else if (dto.removePodiumThird === 'true') {
+      classement.podiumThirdImageUrl = null;
+    }
+
+    await this.classementsRepo.save(classement);
+    return this.findOneWithLines(id);
+  }
+
+  private assertPodiumImage(file: Express.Multer.File): void {
+    if (!file.buffer?.length) {
+      throw new BadRequestException('Fichier image vide');
+    }
+    if (!ClassementsService.PODIUM_IMAGE_MIMES.has(file.mimetype)) {
+      throw new BadRequestException(
+        'Image podium : formats acceptés JPEG, PNG, WebP, GIF.',
+      );
+    }
   }
 }

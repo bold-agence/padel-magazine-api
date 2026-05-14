@@ -5,6 +5,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUUID,
   MaxLength,
 } from 'class-validator';
 import { LATEST_RESULT_CATEGORIES } from '../latest-result-category';
@@ -55,6 +56,10 @@ export class CreateLatestResultDto {
   @IsOptional()
   @IsIn(LATEST_RESULT_CATEGORIES)
   category?: LatestResultCategory;
+
+  @IsOptional()
+  @IsUUID()
+  scopeId?: string;
 
   @IsOptional()
   @IsBoolean()

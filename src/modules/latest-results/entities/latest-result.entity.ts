@@ -1,6 +1,7 @@
-import { Column, Entity } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import type { LatestResultCategory } from '../latest-result-category';
+import { LatestResultScope } from './latest-result-scope.entity';
 
 @Entity('latest_results')
 export class LatestResult extends BaseEntity {
@@ -33,6 +34,13 @@ export class LatestResult extends BaseEntity {
 
   @Column({ type: 'varchar', length: 40, default: 'men' })
   category: LatestResultCategory;
+
+  @ManyToOne(() => LatestResultScope, (scope) => scope.results, {
+    nullable: false,
+    onDelete: 'RESTRICT',
+  })
+  @JoinColumn({ name: 'scopeId' })
+  scope: LatestResultScope;
 
   @Column({ default: true })
   isPublished: boolean;

@@ -25,8 +25,15 @@ export class LatestResultsController {
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(8), ParseIntPipe) limit: number,
     @Query('category', new DefaultValuePipe('all')) category: string,
+    @Query('scope', new DefaultValuePipe('all')) scope: string,
   ) {
-    return this.latestResultsService.findPaginated(page, limit, category, false);
+    return this.latestResultsService.findPaginated(
+      page,
+      limit,
+      category,
+      scope,
+      false,
+    );
   }
 
   @UseGuards(JwtAuthGuard)

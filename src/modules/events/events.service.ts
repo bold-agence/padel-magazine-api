@@ -6,11 +6,12 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { FindOptionsWhere, Repository } from 'typeorm';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { Event } from './entities/event.entity';
 import { Tournament } from '../tournaments/entities/tournament.entity';
+import { TournamentCategory } from '../tournament-categories/entities/tournament-category.entity';
 import { MinioService } from '../minio/minio.service';
 
 @Injectable()
@@ -22,6 +23,8 @@ export class EventsService {
     private readonly repo: Repository<Event>,
     @InjectRepository(Tournament)
     private readonly tournamentsRepo: Repository<Tournament>,
+    @InjectRepository(TournamentCategory)
+    private readonly tournamentCategoryRepo: Repository<TournamentCategory>,
     private readonly minioService: MinioService,
   ) {}
 
@@ -30,7 +33,7 @@ export class EventsService {
     file?: Express.Multer.File,
   ): Promise<Event> {
     this.logger.log(
-      `Creating event (title=${dto.title}, slug=${dto.slug}, hasCover=${!!file}, tournamentId=${dto.tournamentId ?? 'none'})`,
+      `Creating event (title=${dto.title}, slug=${dto.slug}, hasCover=${!!file}, tournamentId=${dto.tournamentId ?? 'none'}, tournamentCategoryId=${dto.tournamentCategoryId ?? 'none'})`,
     );
 
     const existing = await this.repo.findOne({ where: { slug: dto.slug } });
@@ -39,6 +42,10 @@ export class EventsService {
     }
 
     const tournament = await this.resolveTournament(dto.tournamentId);
+    const tournamentCategory = await this.resolveTournamentCategory(
+      dto.tournamentCategoryId,
+      tournament?.id ?? null,
+    );
     const coverImageUrl = file
       ? await this.minioService.uploadFile(file, 'events')
       : dto.coverImageUrl;
@@ -52,6 +59,7 @@ export class EventsService {
       descriptionHtml: dto.descriptionHtml ?? null,
       coverImageUrl: coverImageUrl ?? null,
       tournament,
+      tournamentCategory,
     });
 
     this.assertEndAfterStart(event.startAt, event.endAt);
@@ -61,22 +69,41 @@ export class EventsService {
     return this.findOne(saved.id);
   }
 
-  async findAll(filters?: { tournamentId?: string }): Promise<Event[]> {
-    const where = filters?.tournamentId
-      ? { tournament: { id: filters.tournamentId } }
-      : undefined;
+  async findAll(filters?: {
+    tournamentId?: string;
+    tournamentSlug?: string;
+  }): Promise<Event[]> {
+    const slug = filters?.tournamentSlug?.trim();
+    const tid = filters?.tournamentId?.trim();
+
+    let where: FindOptionsWhere<Event> | undefined;
+    if (slug) {
+      where = { tournament: { slug } };
+    } else if (tid) {
+      where = { tournament: { id: tid } };
+    }
+
+    const order = slug
+      ? { startAt: 'ASC' as const }
+      : { startAt: 'DESC' as const, createdAt: 'DESC' as const };
 
     return this.repo.find({
       where,
-      relations: { tournament: true },
-      order: { startAt: 'DESC', createdAt: 'DESC' },
+      relations: {
+        tournament: true,
+        tournamentCategory: true,
+      },
+      order,
     });
   }
 
   async findOne(id: string): Promise<Event> {
     const event = await this.repo.findOne({
       where: { id },
-      relations: { tournament: true },
+      relations: {
+        tournament: true,
+        tournamentCategory: { tournament: true },
+      },
     });
     if (!event) {
       throw new NotFoundException('Event not found');
@@ -122,6 +149,21 @@ export class EventsService {
       event.tournament = await this.resolveTournament(dto.tournamentId);
     }
 
+    if (dto.tournamentCategoryId !== undefined) {
+      event.tournamentCategory = await this.resolveTournamentCategory(
+        dto.tournamentCategoryId,
+        event.tournament?.id ?? null,
+      );
+    } else if (dto.tournamentId !== undefined) {
+      if (event.tournamentCategory) {
+        const catTid = event.tournamentCategory.tournament?.id ?? null;
+        const newTid = event.tournament?.id ?? null;
+        if (catTid !== newTid) {
+          event.tournamentCategory = null;
+        }
+      }
+    }
+
     if (file) {
       event.coverImageUrl = await this.minioService.uploadFile(file, 'events');
     } else if (shouldRemoveCover) {
@@ -157,6 +199,38 @@ export class EventsService {
       throw new NotFoundException('Tournament not found');
     }
     return tournament;
+  }
+
+  private async resolveTournamentCategory(
+    categoryId: string | null | undefined,
+    tournamentId: string | null,
+  ): Promise<TournamentCategory | null> {
+    if (
+      categoryId === undefined ||
+      categoryId === null ||
+      (typeof categoryId === 'string' && categoryId.trim() === '')
+    ) {
+      return null;
+    }
+    if (!tournamentId) {
+      throw new BadRequestException(
+        'tournamentCategoryId requires a tournament on the event',
+      );
+    }
+
+    const category = await this.tournamentCategoryRepo.findOne({
+      where: { id: categoryId },
+      relations: { tournament: true },
+    });
+    if (!category) {
+      throw new NotFoundException('Tournament category not found');
+    }
+    if (!category.tournament || category.tournament.id !== tournamentId) {
+      throw new BadRequestException(
+        'Tournament category does not belong to the selected tournament',
+      );
+    }
+    return category;
   }
 
   private parseDate(value: string, field: string): Date {

@@ -38,9 +38,13 @@ export class EventsController {
   }
 
   @Get()
-  findAll(@Query('tournamentId') tournamentId?: string) {
+  findAll(
+    @Query('tournamentId') tournamentId?: string,
+    @Query('tournamentSlug') tournamentSlug?: string,
+  ) {
     return this.eventsService.findAll({
       tournamentId: tournamentId?.trim() || undefined,
+      tournamentSlug: tournamentSlug?.trim() || undefined,
     });
   }
 

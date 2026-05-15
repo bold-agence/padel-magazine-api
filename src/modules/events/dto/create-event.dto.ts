@@ -1,3 +1,4 @@
+import { Transform } from 'class-transformer';
 import {
   IsDateString,
   IsNotEmpty,
@@ -6,6 +7,9 @@ import {
   IsUUID,
   MaxLength,
 } from 'class-validator';
+
+const emptyStringToNull = ({ value }: { value: unknown }) =>
+  typeof value === 'string' && value.trim() === '' ? null : value;
 
 export class CreateEventDto {
   @IsString()
@@ -33,6 +37,11 @@ export class CreateEventDto {
   @IsOptional()
   @IsUUID()
   tournamentId?: string | null;
+
+  @IsOptional()
+  @Transform(emptyStringToNull)
+  @IsUUID()
+  tournamentCategoryId?: string | null;
 
   @IsOptional()
   @IsString()

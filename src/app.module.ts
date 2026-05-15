@@ -20,6 +20,7 @@ import { EventsModule } from './modules/events/events.module';
 import { FipRankingsModule } from './modules/fip-rankings/fip-rankings.module';
 import { LatestResultsModule } from './modules/latest-results/latest-results.module';
 import { LivesModule } from './modules/lives/lives.module';
+import { TournamentCategoriesModule } from './modules/tournament-categories/tournament-categories.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { LivesModule } from './modules/lives/lives.module';
     ClassementsModule,
     VideosModule,
     TournamentsModule,
+    TournamentCategoriesModule,
     EventsModule,
     FipRankingsModule,
     LatestResultsModule,

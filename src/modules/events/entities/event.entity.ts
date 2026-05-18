@@ -1,7 +1,8 @@
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, JoinTable, ManyToMany, ManyToOne } from 'typeorm';
 import { BaseEntity } from '../../../common/entities/base.entity';
 import { TournamentCategory } from '../../tournament-categories/entities/tournament-category.entity';
 import { Tournament } from '../../tournaments/entities/tournament.entity';
+import { EventTag } from './event-tag.entity';
 
 @Entity('events')
 export class Event extends BaseEntity {
@@ -37,4 +38,12 @@ export class Event extends BaseEntity {
     onDelete: 'SET NULL',
   })
   tournamentCategory?: TournamentCategory | null;
+
+  @ManyToMany(() => EventTag, (tag) => tag.events, { cascade: true })
+  @JoinTable({
+    name: 'events_event_tags',
+    joinColumn: { name: 'event_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'event_tag_id', referencedColumnName: 'id' },
+  })
+  tags: EventTag[];
 }

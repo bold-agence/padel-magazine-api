@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer';
 import {
+  IsArray,
   IsDateString,
   IsNotEmpty,
   IsOptional,
@@ -7,6 +8,7 @@ import {
   IsUUID,
   MaxLength,
 } from 'class-validator';
+import { parseTagsField } from './parse-tags-field.util';
 
 const emptyStringToNull = ({ value }: { value: unknown }) =>
   typeof value === 'string' && value.trim() === '' ? null : value;
@@ -50,4 +52,10 @@ export class CreateEventDto {
   @IsOptional()
   @IsString()
   coverImageUrl?: string | null;
+
+  @IsOptional()
+  @Transform(({ value }) => parseTagsField(value))
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
 }

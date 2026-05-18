@@ -6,10 +6,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, Repository } from 'typeorm';
+import { FindOptionsWhere, In, Repository } from 'typeorm';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { Event } from './entities/event.entity';
+import { EventTag } from './entities/event-tag.entity';
 import { Tournament } from '../tournaments/entities/tournament.entity';
 import { TournamentCategory } from '../tournament-categories/entities/tournament-category.entity';
 import { MinioService } from '../minio/minio.service';
@@ -21,6 +22,8 @@ export class EventsService {
   constructor(
     @InjectRepository(Event)
     private readonly repo: Repository<Event>,
+    @InjectRepository(EventTag)
+    private readonly eventTagsRepo: Repository<EventTag>,
     @InjectRepository(Tournament)
     private readonly tournamentsRepo: Repository<Tournament>,
     @InjectRepository(TournamentCategory)
@@ -50,6 +53,8 @@ export class EventsService {
       ? await this.minioService.uploadFile(file, 'events')
       : dto.coverImageUrl;
 
+    const tags = await this.resolveTags(dto.tags);
+
     const event = this.repo.create({
       title: dto.title,
       slug: dto.slug,
@@ -60,6 +65,7 @@ export class EventsService {
       coverImageUrl: coverImageUrl ?? null,
       tournament,
       tournamentCategory,
+      tags,
     });
 
     this.assertEndAfterStart(event.startAt, event.endAt);
@@ -72,9 +78,32 @@ export class EventsService {
   async findAll(filters?: {
     tournamentId?: string;
     tournamentSlug?: string;
+    tagId?: string;
   }): Promise<Event[]> {
     const slug = filters?.tournamentSlug?.trim();
     const tid = filters?.tournamentId?.trim();
+    const tagId = filters?.tagId?.trim();
+
+    if (tagId) {
+      const qb = this.repo
+        .createQueryBuilder('event')
+        .leftJoinAndSelect('event.tournament', 'tournament')
+        .leftJoinAndSelect('event.tournamentCategory', 'tournamentCategory')
+        .leftJoinAndSelect('event.tags', 'tags')
+        .innerJoin('event.tags', 'filterTag', 'filterTag.id = :tagId', { tagId });
+
+      if (slug) {
+        qb.andWhere('tournament.slug = :slug', { slug });
+        qb.orderBy('event.startAt', 'ASC');
+      } else if (tid) {
+        qb.andWhere('tournament.id = :tid', { tid });
+        qb.orderBy('event.startAt', 'DESC').addOrderBy('event.createdAt', 'DESC');
+      } else {
+        qb.orderBy('event.startAt', 'DESC').addOrderBy('event.createdAt', 'DESC');
+      }
+
+      return qb.getMany();
+    }
 
     let where: FindOptionsWhere<Event> | undefined;
     if (slug) {
@@ -92,6 +121,7 @@ export class EventsService {
       relations: {
         tournament: true,
         tournamentCategory: true,
+        tags: true,
       },
       order,
     });
@@ -103,6 +133,7 @@ export class EventsService {
       relations: {
         tournament: true,
         tournamentCategory: { tournament: true },
+        tags: true,
       },
     });
     if (!event) {
@@ -144,6 +175,9 @@ export class EventsService {
     }
     if (dto.descriptionHtml !== undefined) {
       event.descriptionHtml = dto.descriptionHtml ?? null;
+    }
+    if (dto.tags !== undefined) {
+      event.tags = await this.resolveTags(dto.tags);
     }
     if (dto.tournamentId !== undefined) {
       event.tournament = await this.resolveTournament(dto.tournamentId);
@@ -245,5 +279,33 @@ export class EventsService {
     if (endAt && endAt.getTime() < startAt.getTime()) {
       throw new BadRequestException('endAt must be after startAt');
     }
+  }
+
+  private async resolveTags(tags?: string[]): Promise<EventTag[]> {
+    if (!tags?.length) {
+      return [];
+    }
+
+    const normalized = [
+      ...new Set(tags.map((tag) => tag.trim()).filter(Boolean)),
+    ];
+    if (!normalized.length) {
+      return [];
+    }
+
+    const existingTags = await this.eventTagsRepo.find({
+      where: { name: In(normalized) },
+    });
+
+    const existingNames = new Set(existingTags.map((tag) => tag.name));
+    const missingNames = normalized.filter((name) => !existingNames.has(name));
+
+    const createdTags = missingNames.length
+      ? await this.eventTagsRepo.save(
+          missingNames.map((name) => this.eventTagsRepo.create({ name })),
+        )
+      : [];
+
+    return [...existingTags, ...createdTags];
   }
 }

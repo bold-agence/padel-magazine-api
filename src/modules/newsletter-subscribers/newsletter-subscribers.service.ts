@@ -4,7 +4,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { QueryFailedError, Repository } from 'typeorm';
 import { CreateNewsletterSubscriberDto } from './dto/create-newsletter-subscriber.dto';
 import { NewsletterSubscriber } from './entities/newsletter-subscriber.entity';
 
@@ -19,7 +19,11 @@ export class NewsletterSubscribersService {
 
   async create(dto: CreateNewsletterSubscriberDto): Promise<NewsletterSubscriber> {
     const email = dto.email.trim().toLowerCase();
-    const existing = await this.repo.findOne({ where: { email } });
+    const existing = await this.repo
+      .createQueryBuilder('subscriber')
+      .where('LOWER(subscriber.email) = :email', { email })
+      .getOne();
+
     if (existing) {
       throw new ConflictException('Cette adresse e-mail est déjà inscrite.');
     }
@@ -33,9 +37,24 @@ export class NewsletterSubscribersService {
       acceptsPrintMagazine: dto.acceptsPrintMagazine === true,
     });
 
-    const saved = await this.repo.save(subscriber);
-    this.logger.log(`Newsletter subscriber created (id=${saved.id}, email=${saved.email})`);
-    return saved;
+    try {
+      const saved = await this.repo.save(subscriber);
+      this.logger.log(`Newsletter subscriber created (id=${saved.id}, email=${saved.email})`);
+      return saved;
+    } catch (error) {
+      if (this.isDuplicateEmailError(error)) {
+        throw new ConflictException('Cette adresse e-mail est déjà inscrite.');
+      }
+      throw error;
+    }
+  }
+
+  private isDuplicateEmailError(error: unknown): boolean {
+    if (!(error instanceof QueryFailedError)) {
+      return false;
+    }
+    const driverError = error.driverError as { code?: string };
+    return driverError?.code === '23505';
   }
 
   async findAll(): Promise<NewsletterSubscriber[]> {

@@ -21,6 +21,7 @@ import { FipRankingsModule } from './modules/fip-rankings/fip-rankings.module';
 import { LatestResultsModule } from './modules/latest-results/latest-results.module';
 import { LivesModule } from './modules/lives/lives.module';
 import { TournamentCategoriesModule } from './modules/tournament-categories/tournament-categories.module';
+import { NewsletterSubscribersModule } from './modules/newsletter-subscribers/newsletter-subscribers.module';
 
 @Module({
   imports: [
@@ -46,6 +47,7 @@ import { TournamentCategoriesModule } from './modules/tournament-categories/tour
     FipRankingsModule,
     LatestResultsModule,
     LivesModule,
+    NewsletterSubscribersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
